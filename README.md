@@ -18,9 +18,9 @@ For example,
 
 searches for a rich word of length $1000$ over a ternary alphabet that avoids squares. The run of the program shows that such a word does not exist. The run shows that the longest and lexicographically least ternary word avoiding squares is $0102010$. Running
 
-  ./backtrack 1000 3 2+ 1
+    ./backtrack 1000 3 2+ 1
 
-attempts to find a $3$-letter rich word of length $1000$ that avoids $2+-powers$. The longest found word is of length $78$.
+attempts to find a $3$-letter rich word of length $1000$ that avoids $2+$-powers. The longest found word is of length $78$.
 
 ## References
 <a id="1">[1]</a> 
