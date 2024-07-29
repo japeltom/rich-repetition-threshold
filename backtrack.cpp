@@ -1,6 +1,21 @@
 #include <iostream>
 #include <string>
+#include <sstream>
 #include "eertree.h"
+#include "suffix_tree.h"
+
+/*
+ * Split a string according to a comma separator and return the pieces as a vector.
+ */
+vector<string> split(string w) {
+    stringstream ss(w);
+    vector<string> tokens = vector<string>();
+    string token;
+    while (getline(ss, token, ',')) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
 
 /*
  * Check if the given string has a suffix that is a repetition with exponent
@@ -48,11 +63,25 @@ bool suffix_repetition_plus(string& w, int top, int bottom) {
     return false;
 }
 
-string backtrack(bool (*suffix_condition)(string&, int, int), int max_length, int letters, int top, int bottom, string prefix = "") {
+string backtrack(bool (*suffix_condition)(string&, int, int), int max_length, int letters, int top, int bottom, string prefix = "", vector<string> forbidden_factors = vector<string>()) {
     char max_letter = INT2CHAR(letters - 1);
     int longest = prefix.length();
     EerTree eertree = EerTree(letters, prefix);
+    SuffixTree suffix_tree = SuffixTree(letters);
+    for (auto w : forbidden_factors) {
+        suffix_tree.add(w);
+    }
     char extension = '0';
+
+    // Check that the given prefix does not contain any forbidden factors.
+    for (int i = 1; i <= prefix.length(); i++) {
+        string p = prefix.substr(0, i);
+        cout << p << " " << suffix_tree.has_suffix(p) << endl;
+        if (suffix_tree.has_suffix(p)) {
+            cout << "The given prefix contains a forbidden factor." << endl;
+            exit(1);
+        }
+    }
 
     // Check that the given prefix is rich and does not satisfy the suffix
     // condition for all prefixes.
@@ -100,49 +129,49 @@ string backtrack(bool (*suffix_condition)(string&, int, int), int max_length, in
             max_allowed_letter++;
         }
 
-        if (eertree.is_rich() and not suffix_condition(eertree.word, top, bottom)) {
-          // Adding the letter was successful.
-          if (eertree.word.length() > longest) {
-              longest = eertree.word.length();
-              cout << longest << " " << eertree.word << endl;
-          }
-          if (eertree.word.length() == max_length) {
-              return eertree.word;
-          }
-          extension = '0';
+        if (!suffix_tree.has_suffix(eertree.word) && eertree.is_rich() && !suffix_condition(eertree.word, top, bottom)) {
+            // Adding the letter was successful.
+            if (eertree.word.length() > longest) {
+                longest = eertree.word.length();
+                cout << longest << " " << eertree.word << endl;
+            }
+            if (eertree.word.length() == max_length) {
+                return eertree.word;
+            }
+            extension = '0';
         }
         else {
-          // Adding the letter was unsuccessful. Backtrack.
-          bool allowed_to_increment = false;
-          char a;
-          while (!allowed_to_increment && eertree.word.length() - prefix.length() > 0) {
-              a = eertree.word.back();
-              eertree.pop();
+            // Adding the letter was unsuccessful. Backtrack.
+            bool allowed_to_increment = false;
+            char a;
+            while (!allowed_to_increment && eertree.word.length() - prefix.length() > 0) {
+                a = eertree.word.back();
+                eertree.pop();
 
-              // Check if we happened to remove a letter completely.
-              if (eertree.word.length() == letter_positions[CHAR2INT(max_allowed_letter - 1)]) {
-                  letter_positions[CHAR2INT(max_allowed_letter - 1)] = -1;
-                  max_allowed_letter--;
-              }
+                // Check if we happened to remove a letter completely.
+                if (eertree.word.length() == letter_positions[CHAR2INT(max_allowed_letter - 1)]) {
+                    letter_positions[CHAR2INT(max_allowed_letter - 1)] = -1;
+                    max_allowed_letter--;
+                }
 
-              allowed_to_increment = a < min(max_letter, max_allowed_letter);
-          }
+                allowed_to_increment = a < min(max_letter, max_allowed_letter);
+            }
 
-          if (eertree.word.length() - prefix.length() <= 0 && a == min(max_letter, max_allowed_letter)) {
-              // We backtracked to the beginning and must terminate.
-              break;
-          }
-          else {
-              // Increment the letter a to be the new extending letter.
-              extension = a + 1;
-          }
+            if (eertree.word.length() - prefix.length() <= 0 && a == min(max_letter, max_allowed_letter)) {
+                // We backtracked to the beginning and must terminate.
+                break;
+            }
+            else {
+                // Increment the letter a to be the new extending letter.
+                extension = a + 1;
+            }
         }
     }
     return string("");
 }
 
 void help(string program) {
-    cout << "Usage: " << program << " max_length n_letters top bottom" << endl;
+    cout << "Usage: " << program << " max_length n_letters top bottom [prefix] [forbidden_factors]" << endl;
     exit(1);
 }
 
@@ -181,6 +210,14 @@ int main(int argc, char *argv[]) {
         prefix = string("");
     }
 
+    vector<string> forbidden_factors;
+    if (argc > 6) {
+        forbidden_factors = split(string(argv[6]));
+    }
+    else {
+        forbidden_factors = vector<string>();
+    }
+
     bool (*suffix_condition)(string&, int, int);
     if (power_plus) {
         suffix_condition = suffix_repetition_plus;
@@ -189,7 +226,7 @@ int main(int argc, char *argv[]) {
         suffix_condition = suffix_repetition;
     }
 
-    string found = backtrack(suffix_condition, max_length, letters, top, bottom, prefix);
+    string found = backtrack(suffix_condition, max_length, letters, top, bottom, prefix, forbidden_factors);
 
     if (found.length() == 0) {
         cout << "The pattern is unavoidable!" << endl;
