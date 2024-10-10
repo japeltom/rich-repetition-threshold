@@ -76,7 +76,6 @@ string backtrack(bool (*suffix_condition)(string&, int, int), int max_length, in
     // Check that the given prefix does not contain any forbidden factors.
     for (int i = 1; i <= prefix.length(); i++) {
         string p = prefix.substr(0, i);
-        cout << p << " " << suffix_tree.has_suffix(p) << endl;
         if (suffix_tree.has_suffix(p)) {
             cout << "The given prefix contains a forbidden factor." << endl;
             exit(1);
@@ -98,24 +97,28 @@ string backtrack(bool (*suffix_condition)(string&, int, int), int max_length, in
     }
 
     // This keeps track of the first appearance of each letter. This is used to
-    // prune out isomorphic words.
+    // prune out isomorphic words. This functionality is disabled if there are
+    // forbidden factors as this logic does then not work.
     vector<int> letter_positions = vector<int>(letters, -1);
-    char max_allowed_letter = '0';
-    int filled = -1;
-    for (int i = 0; i < prefix.length(); i++) {
-        bool foo = prefix[i] > max_letter;
-        if (prefix[i] > max_letter) {
-            cout << "The given prefix has more than " << letters << " letters." << endl;
-            exit(1);
-        }
-        if (letter_positions[CHAR2INT(prefix[i])] == -1) {
-            if (CHAR2INT(prefix[i]) != filled + 1) {
-                cout << "The first occurrences of letters in the prefix must be in integer order." << endl;
+    char max_allowed_letter = max_letter;
+    if (forbidden_factors.size() == 0) {
+        max_allowed_letter = '0';
+        int filled = -1;
+        for (int i = 0; i < prefix.length(); i++) {
+            bool foo = prefix[i] > max_letter;
+            if (prefix[i] > max_letter) {
+                cout << "The given prefix has more than " << letters << " letters." << endl;
                 exit(1);
             }
-            letter_positions[CHAR2INT(prefix[i])] = i;
-            max_allowed_letter++;
-            filled++;
+            if (letter_positions[CHAR2INT(prefix[i])] == -1) {
+                if (CHAR2INT(prefix[i]) != filled + 1) {
+                    cout << "The first occurrences of letters in the prefix must be in integer order." << endl;
+                    exit(1);
+                }
+                letter_positions[CHAR2INT(prefix[i])] = i;
+                max_allowed_letter++;
+                filled++;
+            }
         }
     }
 
@@ -123,8 +126,8 @@ string backtrack(bool (*suffix_condition)(string&, int, int), int max_length, in
         eertree.add(extension);
 
         // Update the letter occurrences if the new letter does not previously
-        // appear.
-        if (letter_positions[CHAR2INT(extension)] == -1) {
+        // appear. This is disabled if there are forbidden factors.
+        if (forbidden_factors.size() == 0 && letter_positions[CHAR2INT(extension)] == -1) {
             letter_positions[CHAR2INT(extension)] = eertree.word.length() - 1;
             max_allowed_letter++;
         }
